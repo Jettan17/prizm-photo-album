@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 import { Photo } from "@/lib/photos";
-import { ExifData, extractExif } from "@/lib/exif";
+import { ExifData, extractExif, reverseGeocode } from "@/lib/exif";
 
 interface LightboxProps {
   photos: Photo[];
@@ -17,6 +17,7 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
   const [loadingExif, setLoadingExif] = useState(true);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showInfo, setShowInfo] = useState(true);
+  const [location, setLocation] = useState<string | null>(null);
 
   const photo = photos[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -39,10 +40,17 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
   useEffect(() => {
     setLoadingExif(true);
     setExifData(null);
+    setLocation(null);
 
-    extractExif(photo.src).then((data) => {
+    extractExif(photo.src).then(async (data) => {
       setExifData(data);
       setLoadingExif(false);
+
+      // Reverse geocode if GPS coordinates exist
+      if (data?.latitude && data?.longitude) {
+        const loc = await reverseGeocode(data.latitude, data.longitude);
+        setLocation(loc);
+      }
     });
   }, [photo.src]);
 
@@ -74,6 +82,30 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
     document.body.classList.add("lightbox-open");
     return () => document.body.classList.remove("lightbox-open");
   }, []);
+
+  // Format focal length with 35mm equivalent if different
+  const formatFocalLength = () => {
+    if (!exifData?.focalLength) return null;
+    if (exifData.focalLength35mm) {
+      const actual = parseInt(exifData.focalLength);
+      if (actual !== exifData.focalLength35mm) {
+        return `${exifData.focalLength} (${exifData.focalLength35mm}mm)`;
+      }
+    }
+    return exifData.focalLength;
+  };
+
+  const hasExifData = exifData && (
+    exifData.dateTaken ||
+    exifData.camera ||
+    exifData.lensModel ||
+    exifData.focalLength ||
+    exifData.aperture ||
+    exifData.shutterSpeed ||
+    exifData.iso ||
+    exifData.exposureBias ||
+    location
+  );
 
   return (
     <div
@@ -170,12 +202,23 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
         {/* EXIF Panel - only show when image is loaded */}
         {showInfo && isImageLoaded && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 rounded-b-lg">
-            <div className="flex flex-wrap items-center justify-center gap-6 text-white/90 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-white/90 text-sm">
               {loadingExif ? (
                 <span className="text-white/50">Loading info...</span>
-              ) : exifData && Object.keys(exifData).length > 0 ? (
+              ) : hasExifData ? (
                 <>
-                  {exifData.dateTaken && (
+                  {/* Location */}
+                  {location && (
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {location}
+                    </span>
+                  )}
+                  {/* Date */}
+                  {exifData?.dateTaken && (
                     <span className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -183,7 +226,8 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
                       {exifData.dateTaken}
                     </span>
                   )}
-                  {exifData.camera && (
+                  {/* Camera */}
+                  {exifData?.camera && (
                     <span className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -192,18 +236,30 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
                       {exifData.camera}
                     </span>
                   )}
-                  {exifData.focalLength && (
-                    <span className="font-mono">{exifData.focalLength}</span>
+                  {/* Lens Model */}
+                  {exifData?.lensModel && (
+                    <span className="flex items-center gap-2 text-white/70">
+                      {exifData.lensModel}
+                    </span>
                   )}
-                  {exifData.aperture && (
-                    <span className="font-mono">{exifData.aperture}</span>
-                  )}
-                  {exifData.shutterSpeed && (
-                    <span className="font-mono">{exifData.shutterSpeed}</span>
-                  )}
-                  {exifData.iso && (
-                    <span className="font-mono">ISO {exifData.iso}</span>
-                  )}
+                  {/* Technical specs row */}
+                  <div className="flex items-center gap-4 font-mono">
+                    {formatFocalLength() && (
+                      <span>{formatFocalLength()}</span>
+                    )}
+                    {exifData?.aperture && (
+                      <span>{exifData.aperture}</span>
+                    )}
+                    {exifData?.shutterSpeed && (
+                      <span>{exifData.shutterSpeed}</span>
+                    )}
+                    {exifData?.iso && (
+                      <span>ISO {exifData.iso}</span>
+                    )}
+                    {exifData?.exposureBias && (
+                      <span className="text-white/70">{exifData.exposureBias}</span>
+                    )}
+                  </div>
                 </>
               ) : (
                 <span className="text-white/50">No camera info available</span>

@@ -1,11 +1,15 @@
 export interface ExifData {
   dateTaken?: string;
   camera?: string;
-  lens?: string;
+  lensModel?: string;
   focalLength?: string;
+  focalLength35mm?: number;
   aperture?: string;
   shutterSpeed?: string;
   iso?: number;
+  exposureBias?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 // Client-side EXIF extraction from ArrayBuffer
@@ -40,7 +44,6 @@ function parseExifFromBuffer(buffer: ArrayBuffer): ExifData | null {
 
     // APP1 marker (EXIF)
     if (marker === 0xE1) {
-      const segmentLength = view.getUint16(offset + 2);
       const exifOffset = offset + 4;
 
       // Check for "Exif\0\0" header
@@ -90,7 +93,6 @@ function parseExifData(view: DataView, tiffOffset: number): ExifData {
     const exifIfdOffset = tiffOffset + exifIfdPointer;
     const exifData = parseIFD(view, tiffOffset, exifIfdOffset, littleEndian);
 
-    // Extract relevant tags
     // DateTimeOriginal (0x9003)
     const dateOriginal = exifData.get(0x9003);
     if (dateOriginal) {
@@ -132,6 +134,31 @@ function parseExifData(view: DataView, tiffOffset: number): ExifData {
         result.focalLength = `${Math.round(num / den)}mm`;
       }
     }
+
+    // FocalLengthIn35mmFilm (0xA405)
+    const focalLength35mm = exifData.get(0xA405);
+    if (focalLength35mm !== undefined && focalLength35mm > 0) {
+      result.focalLength35mm = focalLength35mm;
+    }
+
+    // ExposureBiasValue (0x9204) - signed rational
+    const exposureBias = exifData.get(0x9204);
+    if (exposureBias) {
+      const num = readSigned32(view, tiffOffset + exposureBias, littleEndian);
+      const den = readSigned32(view, tiffOffset + exposureBias + 4, littleEndian);
+      if (den !== 0) {
+        const ev = num / den;
+        if (ev !== 0) {
+          result.exposureBias = ev > 0 ? `+${ev.toFixed(1)} EV` : `${ev.toFixed(1)} EV`;
+        }
+      }
+    }
+
+    // LensModel (0xA434)
+    const lensModel = exifData.get(0xA434);
+    if (lensModel) {
+      result.lensModel = readString(view, tiffOffset + lensModel, 100).trim();
+    }
   }
 
   // Camera make and model from IFD0
@@ -143,7 +170,62 @@ function parseExifData(view: DataView, tiffOffset: number): ExifData {
     result.camera = modelStr.startsWith(makeStr) ? modelStr : `${makeStr} ${modelStr}`.trim();
   }
 
+  // GPS IFD (tag 0x8825)
+  const gpsIfdPointer = ifd0Data.get(0x8825);
+  if (gpsIfdPointer) {
+    const gpsIfdOffset = tiffOffset + gpsIfdPointer;
+    const gpsData = parseIFD(view, tiffOffset, gpsIfdOffset, littleEndian);
+
+    // GPSLatitudeRef (0x0001) and GPSLatitude (0x0002)
+    const latRef = gpsData.get(0x0001);
+    const latValue = gpsData.get(0x0002);
+    // GPSLongitudeRef (0x0003) and GPSLongitude (0x0004)
+    const lonRef = gpsData.get(0x0003);
+    const lonValue = gpsData.get(0x0004);
+
+    if (latValue && lonValue) {
+      const latRefChar = latRef ? String.fromCharCode(latRef & 0xFF) : "N";
+      const lonRefChar = lonRef ? String.fromCharCode(lonRef & 0xFF) : "E";
+
+      const lat = parseGpsCoordinate(view, tiffOffset + latValue, littleEndian);
+      const lon = parseGpsCoordinate(view, tiffOffset + lonValue, littleEndian);
+
+      if (lat !== null && lon !== null) {
+        result.latitude = latRefChar === "S" ? -lat : lat;
+        result.longitude = lonRefChar === "W" ? -lon : lon;
+      }
+    }
+  }
+
   return result;
+}
+
+function parseGpsCoordinate(view: DataView, offset: number, littleEndian: boolean): number | null {
+  try {
+    const read32 = (off: number) => view.getUint32(off, littleEndian);
+
+    // GPS coordinates are stored as 3 rationals: degrees, minutes, seconds
+    const degNum = read32(offset);
+    const degDen = read32(offset + 4);
+    const minNum = read32(offset + 8);
+    const minDen = read32(offset + 12);
+    const secNum = read32(offset + 16);
+    const secDen = read32(offset + 20);
+
+    if (degDen === 0 || minDen === 0 || secDen === 0) return null;
+
+    const degrees = degNum / degDen;
+    const minutes = minNum / minDen;
+    const seconds = secNum / secDen;
+
+    return degrees + (minutes / 60) + (seconds / 3600);
+  } catch {
+    return null;
+  }
+}
+
+function readSigned32(view: DataView, offset: number, littleEndian: boolean): number {
+  return view.getInt32(offset, littleEndian);
 }
 
 function parseIFD(
@@ -219,4 +301,60 @@ function formatExifDate(dateStr: string): string {
     });
   }
   return dateStr;
+}
+
+// Reverse geocoding with caching
+const geoCache = new Map<string, string>();
+
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  const cacheKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+
+  // Check memory cache
+  if (geoCache.has(cacheKey)) {
+    return geoCache.get(cacheKey) || null;
+  }
+
+  // Check sessionStorage
+  if (typeof window !== "undefined") {
+    const cached = sessionStorage.getItem(`geo_${cacheKey}`);
+    if (cached) {
+      geoCache.set(cacheKey, cached);
+      return cached;
+    }
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+
+    // Build location string: City, Country
+    const parts: string[] = [];
+    if (data.city) {
+      parts.push(data.city);
+    } else if (data.locality) {
+      parts.push(data.locality);
+    }
+    if (data.countryName) {
+      parts.push(data.countryName);
+    }
+
+    const location = parts.length > 0 ? parts.join(", ") : null;
+
+    // Cache the result
+    if (location) {
+      geoCache.set(cacheKey, location);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`geo_${cacheKey}`, location);
+      }
+    }
+
+    return location;
+  } catch {
+    return null;
+  }
 }
