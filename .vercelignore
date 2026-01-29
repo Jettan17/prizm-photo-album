@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+
+# IDE
+.idea/
+.vscode/
+
+# Local
+*.local
+
+# Claude
+.claude/
+CLAUDE.md
+instructions.md
+
+# Docs (not needed for deployment)
+codemaps/
+docs/checkpoints/
+
+# Misc
+*.log
+.DS_Store
+nul
