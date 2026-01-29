@@ -2,6 +2,8 @@
 
 Last updated: 2026-01-29
 
+**Live:** [prizm-photo-album.vercel.app](https://prizm-photo-album.vercel.app)
+
 ## Component Tree
 
 ```
@@ -16,6 +18,11 @@ App (layout.tsx)
     │       ├── Navigation buttons
     │       ├── Image viewer
     │       └── EXIF panel
+    │           ├── Location (with pin icon)
+    │           ├── Date (with calendar icon)
+    │           ├── Camera (with camera icon)
+    │           ├── Lens model
+    │           └── Technical specs (focal, aperture, shutter, ISO, EV)
     └── Footer
 ```
 
@@ -29,7 +36,9 @@ App (layout.tsx)
 | PhotoGallery | `shuffledPhotos` | Randomized photo order |
 | PhotoGallery | `lightboxIndex` | Currently open photo |
 | PhotoCard | `isLoaded`, `isVisible` | Loading/animation state |
-| Lightbox | `exifData`, `showInfo` | Metadata display |
+| Lightbox | `exifData` | Extracted EXIF metadata |
+| Lightbox | `location` | Reverse geocoded location |
+| Lightbox | `showInfo` | Toggle info panel visibility |
 
 ### Refs (useRef)
 
@@ -38,6 +47,24 @@ App (layout.tsx)
 | StickyHeader | `lastScrollY` | Scroll direction detection |
 | PhotoCard | `ref` | IntersectionObserver target |
 
+## EXIF Data Interface
+
+```typescript
+interface ExifData {
+  dateTaken?: string;        // "Jan 15, 2025"
+  camera?: string;           // "Canon EOS R5"
+  lensModel?: string;        // "RF 50mm F1.2L USM"
+  focalLength?: string;      // "50mm"
+  focalLength35mm?: number;  // 75 (for crop sensors)
+  aperture?: string;         // "f/1.2"
+  shutterSpeed?: string;     // "1/250s"
+  iso?: number;              // 400
+  exposureBias?: string;     // "+0.7 EV"
+  latitude?: number;         // 37.7749
+  longitude?: number;        // -122.4194
+}
+```
+
 ## Styling Strategy
 
 ### Tailwind Classes
@@ -45,6 +72,7 @@ App (layout.tsx)
 - **Layout**: `columns-1 sm:columns-2 lg:columns-3 xl:columns-4`
 - **Animations**: Custom `scroll-reveal` class with stagger delays
 - **Transitions**: `transition-all duration-300 ease-out`
+- **Header height**: `h-[100px]` → `h-[48px]` on scroll
 
 ### Custom CSS (globals.css)
 
@@ -74,3 +102,20 @@ App (layout.tsx)
 - Next.js `<Image>` component for automatic optimization
 - Responsive `sizes` attribute for appropriate image selection
 - Lazy loading via intersection observer
+- AVIF/WebP conversion on Vercel CDN
+
+## External API Integration
+
+### BigDataCloud Reverse Geocoding
+
+```typescript
+// Called when GPS coordinates exist in EXIF
+const location = await reverseGeocode(lat, lng);
+// Returns: "San Francisco, United States"
+```
+
+**Caching strategy:**
+1. Check memory cache (Map)
+2. Check sessionStorage
+3. Fetch from API if miss
+4. Cache result in both layers

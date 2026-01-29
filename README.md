@@ -1,6 +1,8 @@
 # Prizm Photo Album
 
-A modern photo gallery built with Next.js 15 and React 19. Features a responsive masonry layout, fullscreen lightbox with EXIF metadata display, and animated sticky header.
+A modern photo gallery built with Next.js 15 and React 19. Features a responsive masonry layout, fullscreen lightbox with rich EXIF metadata display including location, and animated sticky header.
+
+**Live Demo:** [prizm-photo-album.vercel.app](https://prizm-photo-album.vercel.app)
 
 ## Tech Stack
 
@@ -8,14 +10,23 @@ A modern photo gallery built with Next.js 15 and React 19. Features a responsive
 - **UI**: React 19
 - **Styling**: Tailwind CSS 3.4
 - **Language**: TypeScript 5.7
+- **Deployment**: Vercel
 
 ## Features
 
 - **Masonry Gallery**: Responsive multi-column layout (1-4 columns based on viewport)
 - **Lightbox Viewer**: Fullscreen photo viewing with keyboard navigation
-- **EXIF Metadata**: Extracts and displays camera info (date, camera model, focal length, aperture, shutter speed, ISO)
-- **Animated Header**: Sticky header that shrinks on scroll with smooth transitions
+- **Rich EXIF Metadata**: Extracts and displays comprehensive camera info:
+  - Date taken
+  - Camera model
+  - Lens model
+  - Focal length (with 35mm equivalent)
+  - Aperture, shutter speed, ISO
+  - Exposure compensation
+  - **Location** (reverse geocoded from GPS coordinates)
+- **Animated Header**: Sticky header that shrinks on scroll (100px → 48px)
 - **Lazy Loading**: Photos load on scroll with staggered reveal animations
+- **Location Caching**: GPS coordinates cached to minimize API calls
 
 ## Prerequisites
 
@@ -48,32 +59,35 @@ npm start
 ## Adding Photos
 
 Place your photos in the `public/photos/` directory. Supported formats:
-- JPG/JPEG
+- JPG/JPEG (with EXIF support)
 - PNG
 - WebP
 
-Photos are automatically detected and displayed in a randomized order on each page load.
+Photos are automatically detected and displayed in a randomized order on each page load. EXIF metadata including GPS location is extracted client-side.
 
 ## Project Structure
 
 ```
 prizm-photo-album/
 ├── public/
-│   └── photos/           # Photo files (35 images)
+│   └── photos/              # Photo files (35 images)
 ├── src/
 │   ├── app/
-│   │   ├── globals.css   # Global styles and animations
-│   │   ├── layout.tsx    # Root layout with fonts
-│   │   └── page.tsx      # Home page
+│   │   ├── globals.css      # Global styles and animations
+│   │   ├── layout.tsx       # Root layout with fonts
+│   │   └── page.tsx         # Home page
 │   ├── components/
 │   │   ├── Footer.tsx       # Footer component
-│   │   ├── Lightbox.tsx     # Fullscreen photo viewer
+│   │   ├── Lightbox.tsx     # Fullscreen viewer + EXIF display
 │   │   ├── PhotoCard.tsx    # Individual photo card
 │   │   ├── PhotoGallery.tsx # Masonry gallery container
 │   │   └── StickyHeader.tsx # Animated header
 │   └── lib/
-│       ├── exif.ts       # EXIF metadata extraction
-│       └── photos.ts     # Photo utilities
+│       ├── exif.ts          # EXIF extraction + reverse geocoding
+│       └── photos.ts        # Photo manifest utilities
+├── scripts/
+│   └── generate-photos.js   # Build-time photo manifest generator
+├── vercel.json              # Vercel deployment config
 ├── package.json
 ├── tailwind.config.ts
 └── tsconfig.json
@@ -96,6 +110,18 @@ prizm-photo-album/
 | `npm run build` | Build for production |
 | `npm start` | Start production server |
 | `npm run lint` | Run ESLint |
+
+## Deployment
+
+Deployed on Vercel with automatic builds on push to main.
+
+```bash
+# Deploy via CLI
+npm i -g vercel
+vercel --prod
+```
+
+See [docs/DEPLOY.md](docs/DEPLOY.md) for detailed deployment instructions.
 
 ## License
 
