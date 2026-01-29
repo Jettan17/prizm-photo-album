@@ -1,15 +1,22 @@
-export default function Home() {
-  return (
-    <main className="container mx-auto px-4 py-8">
-      <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-2">Prizm</h1>
-        <p className="text-neutral-400">Photo Album</p>
-      </header>
+import { getPhotos } from "@/lib/photos";
+import { StickyHeader } from "@/components/StickyHeader";
+import { PhotoGallery } from "@/components/PhotoGallery";
+import { Footer } from "@/components/Footer";
 
-      <div className="text-center text-neutral-500">
-        <p>Add your photos to <code className="bg-neutral-800 px-2 py-1 rounded">/public/photos/</code></p>
-        <p className="mt-2">Then run <code className="bg-neutral-800 px-2 py-1 rounded">npm run dev</code></p>
+export default function Home() {
+  const photos = getPhotos();
+
+  return (
+    <main className="container mx-auto px-4">
+      <StickyHeader
+        title="Prizm"
+        author="Jethro Tan"
+        handle="@jepho_tan"
+      />
+      <div className="mt-4">
+        <PhotoGallery photos={photos} />
       </div>
+      <Footer />
     </main>
   );
 }
