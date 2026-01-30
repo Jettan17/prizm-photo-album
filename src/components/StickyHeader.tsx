@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 
 interface StickyHeaderProps {
   title: string;
@@ -55,8 +56,15 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
             ${isScrolled ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}
           `}
         >
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold">{title}</h1>
-          <p className="text-neutral-600 text-base sm:text-lg mt-1">{author}</p>
+          <Image
+            src="/logo.svg"
+            alt={title}
+            width={160}
+            height={40}
+            className="h-8 sm:h-10 w-auto"
+            priority
+          />
+          <p className="text-neutral-600 text-base sm:text-lg mt-2">{author}</p>
           <a
             href={`https://instagram.com/${handle.replace("@", "")}`}
             target="_blank"
@@ -70,13 +78,19 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
         {/* Collapsed view */}
         <div
           className={`
-            absolute inset-0 flex items-center justify-center
+            absolute inset-0 flex items-center justify-center gap-2
             transition-all duration-300 ease-out
             ${isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
           `}
         >
-          <span className="font-display text-lg sm:text-xl font-bold">{title}</span>
-          <span className="text-neutral-400 mx-1 sm:mx-2">&middot;</span>
+          <Image
+            src="/logo.svg"
+            alt={title}
+            width={100}
+            height={25}
+            className="h-5 sm:h-6 w-auto"
+          />
+          <span className="text-neutral-400">&middot;</span>
           <span className="text-neutral-600 text-sm sm:text-base">{author}</span>
         </div>
       </div>

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" fill="none">
+  <defs>
+    <!-- Glass gradients for prism -->
+    <linearGradient id="glass-front" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9"/>
+      <stop offset="50%" style="stop-color:#e8f4fc;stop-opacity:0.7"/>
+      <stop offset="100%" style="stop-color:#d0e8f5;stop-opacity:0.5"/>
+    </linearGradient>
+
+    <linearGradient id="glass-right" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#b8d4e8;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#8bb8d4;stop-opacity:0.4"/>
+    </linearGradient>
+
+    <linearGradient id="inner-reflect" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </linearGradient>
+
+    <!-- Rainbow sheen gradient (diagonal across prism) -->
+    <linearGradient id="rainbow-sheen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B6B" stop-opacity="0.3"/>
+      <stop offset="15%" stop-color="#FFB347" stop-opacity="0.3"/>
+      <stop offset="30%" stop-color="#FFE66D" stop-opacity="0.3"/>
+      <stop offset="45%" stop-color="#7ED321" stop-opacity="0.3"/>
+      <stop offset="60%" stop-color="#4ECDC4" stop-opacity="0.3"/>
+      <stop offset="75%" stop-color="#45B7D1" stop-opacity="0.3"/>
+      <stop offset="90%" stop-color="#9B6BFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#9B6BFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Secondary rainbow for depth -->
+    <linearGradient id="rainbow-sheen-2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9B6BFF" stop-opacity="0.2"/>
+      <stop offset="20%" stop-color="#45B7D1" stop-opacity="0.2"/>
+      <stop offset="40%" stop-color="#4ECDC4" stop-opacity="0.2"/>
+      <stop offset="60%" stop-color="#FFE66D" stop-opacity="0.2"/>
+      <stop offset="80%" stop-color="#FFB347" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#FF6B6B" stop-opacity="0.15"/>
+    </linearGradient>
+
+    <!-- Blur for sheen -->
+    <filter id="sheen-blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+    </filter>
+  </defs>
+
+  <!-- All content shifted right by 20px to center -->
+  <g transform="translate(20, 0)">
+
+    <!-- 3D Prism base layers -->
+    <polygon points="25,8 44,38 38,42 25,14" fill="url(#glass-right)" stroke="#a0c4d8" stroke-width="0.5"/>
+    <polygon points="8,42 25,8 38,42" fill="url(#glass-front)" stroke="#b0d0e0" stroke-width="0.5"/>
+    <polygon points="8,42 38,42 44,38 14,38" fill="url(#glass-right)" stroke="#a0c4d8" stroke-width="0.5" opacity="0.7"/>
+
+    <!-- Rainbow sheen inside prism (clipped to front face) -->
+    <clipPath id="prism-clip">
+      <polygon points="8,42 25,8 38,42"/>
+    </clipPath>
+
+    <g clip-path="url(#prism-clip)">
+      <!-- Primary rainbow sheen -->
+      <polygon points="8,42 25,8 38,42" fill="url(#rainbow-sheen)" filter="url(#sheen-blur)"/>
+      <!-- Secondary rainbow layer for iridescence -->
+      <polygon points="8,42 25,8 38,42" fill="url(#rainbow-sheen-2)" filter="url(#sheen-blur)"/>
+    </g>
+
+    <!-- Inner reflection highlight (on top) -->
+    <polygon points="12,38 25,14 34,38" fill="url(#inner-reflect)"/>
+
+    <!-- Edge highlights for glass effect -->
+    <line x1="25" y1="8" x2="8" y2="42" stroke="#ffffff" stroke-width="1" opacity="0.6"/>
+    <line x1="25" y1="8" x2="44" y2="38" stroke="#ffffff" stroke-width="0.5" opacity="0.3"/>
+
+    <!-- PRIZM Text -->
+    <text x="52" y="34" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="500" letter-spacing="4" fill="#2a2a2a">
+      PRIZM
+    </text>
+
+  </g>
+</svg>

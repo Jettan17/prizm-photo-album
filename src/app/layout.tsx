@@ -11,6 +11,10 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Prizm Photo Album",
   description: "A personal photo album with masonry layout",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
