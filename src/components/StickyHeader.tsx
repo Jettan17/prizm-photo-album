@@ -78,7 +78,7 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
         {/* Collapsed view */}
         <div
           className={`
-            absolute inset-0 flex items-center justify-center gap-2
+            absolute inset-0 flex items-center justify-center gap-3 -ml-3
             transition-all duration-300 ease-out
             ${isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
           `}
@@ -90,8 +90,8 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
             height={25}
             className="h-5 sm:h-6 w-auto"
           />
-          <span className="text-neutral-400">&middot;</span>
-          <span className="text-neutral-600 text-sm sm:text-base">{author}</span>
+          <span className="text-neutral-400 leading-none -ml-3">·</span>
+          <span className="text-neutral-600 text-sm sm:text-base leading-none">{author}</span>
         </div>
       </div>
     </header>
