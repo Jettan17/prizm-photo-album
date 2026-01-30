@@ -1,90 +1,111 @@
-# Implementation Plan: Enhanced EXIF with Location
+# Implementation Plan: Header Full-Width + Footer Attribution + Mobile Review
 
-Created: 2026-01-29
+Created: 2026-01-30
 Status: completed
-Completed: 2026-01-29
+Completed: 2026-01-30
 
 ## Requirements
 
-Add high-value EXIF attributes to photo info display:
-1. **Lens Model** - Specific lens used
-2. **Exposure Compensation** - +/- EV adjustments
-3. **35mm Equivalent Focal Length** - For crop sensor context
-4. **Location** - Reverse geocode GPS coordinates to city/country
+1. **Add "Claude Code" to footer** - Update the footer component to include a "Claude Code" attribution
+2. **Extend header to full screen width** - Currently the header is contained within `container mx-auto px-4`, needs to span full viewport width while maintaining centered content
+3. **Mobile design code review** - Review all components for mobile responsiveness and fix any issues
+
+## Current State Analysis
+
+### Header (`StickyHeader.tsx`)
+- Located inside `<main className="container mx-auto px-4">` which constrains its width
+- The header itself uses `sticky top-0 z-40` but is limited by parent container
+- Has two states: expanded (100px) and collapsed (48px) based on scroll
+
+### Footer (`Footer.tsx`)
+- Simple component with just "Built with Next.js, React & Tailwind CSS"
+- Also constrained within the container
+
+### Page Layout (`page.tsx`)
+- All content wrapped in `<main className="container mx-auto px-4">`
+- This constrains both header and footer to container width (max-width based on breakpoints)
 
 ## Implementation Phases
 
-### Phase 1: Extract Additional EXIF Tags ✓
-- [x] Add to ExifData interface: `lensModel`, `exposureBias`, `focalLength35mm`
-- [x] Extract LensModel (tag 0xA434) from EXIF IFD
-- [x] Extract ExposureBiasValue (tag 0x9204) - format as "+0.7 EV"
-- [x] Extract FocalLengthIn35mmFilm (tag 0xA405)
+### Phase 1: Restructure Page Layout for Full-Width Header ✓
+- [x] Move `<StickyHeader>` outside the container in `page.tsx`
+- [x] Keep gallery content inside the container
+- [x] Ensure header spans full viewport width with `w-full`
+- [x] Maintain centered header content with internal container/padding
 
-### Phase 2: Extract GPS Coordinates ✓
-- [x] Add `latitude`, `longitude` to ExifData interface
-- [x] Parse GPS IFD (tag 0x8825 points to it)
-- [x] Extract GPSLatitudeRef (0x0001) + GPSLatitude (0x0002)
-- [x] Extract GPSLongitudeRef (0x0003) + GPSLongitude (0x0004)
-- [x] Convert DMS (degrees/minutes/seconds) to decimal
+### Phase 2: Update Footer with Claude Code Attribution ✓
+- [x] Update `Footer.tsx` to include "Claude Code" in the credits
+- [x] Keep the existing styling consistent
+- [x] Added link to https://claude.ai/code
+- [x] Moved footer outside container for full-width consistency
 
-### Phase 3: Reverse Geocoding ✓
-- [x] Add `location` string to ExifData interface
-- [x] Use free reverse geocoding API (BigDataCloud)
-- [x] Extract city + country from response
-- [x] Cache results to avoid repeated API calls
-- [x] Handle missing/failed geocoding gracefully
+### Phase 3: Mobile Design Code Review ✓
+- [x] Review `StickyHeader.tsx` for mobile: 5 issues found
+- [x] Review `PhotoCard.tsx` for mobile: 2 issues found
+- [x] Review `PhotoGallery.tsx` for mobile: 3 issues found
+- [x] Review `Lightbox.tsx` for mobile: 7 issues found (CRITICAL)
+- [x] Review `Footer.tsx` for mobile: 2 issues found
 
-### Phase 4: Update Lightbox Display ✓
-- [x] Display lens model with camera icon or separate
-- [x] Display exposure bias (only if non-zero)
-- [x] Display 35mm equivalent (only if different from actual)
-- [x] Display location with pin icon
+### Phase 4: Implement Mobile Fixes ✓
+- [x] StickyHeader: Responsive text sizing (text-3xl sm:text-4xl md:text-5xl)
+- [x] StickyHeader: Responsive padding (py-4 sm:py-6)
+- [x] StickyHeader: Responsive heights (h-[80px] sm:h-[100px])
+- [x] StickyHeader: Touch-friendly Instagram link (min-h-[44px])
+- [x] PhotoCard: Active states for touch feedback
+- [x] PhotoCard: Focus-visible styles for accessibility
+- [x] PhotoGallery: Responsive gap spacing (gap-2 sm:gap-4)
+- [x] Lightbox: Touch swipe navigation support
+- [x] Lightbox: Responsive button sizing and positioning
+- [x] Lightbox: EXIF panel mobile layout (flex-col, max-h-[40vh], overflow scroll)
+- [x] Lightbox: Text truncation for long camera/lens names
+- [x] Footer: Responsive padding (py-6 sm:py-12)
+- [x] Footer: Touch-friendly link target
 
 ## Technical Details
 
-### GPS Coordinate Conversion
-GPS is stored as rational arrays: `[degrees, minutes, seconds]`
-```
-decimal = degrees + (minutes / 60) + (seconds / 3600)
-if (ref === 'S' || ref === 'W') decimal = -decimal
-```
-
-### Reverse Geocoding API Options
-
-| API | Free Tier | Rate Limit |
-|-----|-----------|------------|
-| BigDataCloud | Unlimited | 1 req/sec |
-| Nominatim | Free | 1 req/sec |
-| OpenCage | 2,500/day | - |
-
-**Recommendation:** BigDataCloud - no API key needed, returns clean city/country.
-
-```
-https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lng}&localityLanguage=en
+### Full-Width Header Pattern
+Current structure:
+```tsx
+<main className="container mx-auto px-4">
+  <StickyHeader ... />  <!-- constrained -->
+  <PhotoGallery ... />
+  <Footer />
+</main>
 ```
 
-### Caching Strategy
-Store geocoded locations in sessionStorage to avoid re-fetching:
-```typescript
-const cacheKey = `geo_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+Proposed structure:
+```tsx
+<>
+  <StickyHeader ... />  <!-- full-width -->
+  <main className="container mx-auto px-4">
+    <PhotoGallery ... />
+  </main>
+  <Footer />  <!-- full-width for consistency -->
+</>
 ```
 
-## File Changes
+### Footer Update
+Current: `Built with Next.js, React & Tailwind CSS`
+Proposed: `Built with Claude Code, Next.js, React & Tailwind CSS`
 
-| File | Action |
-|------|--------|
-| `src/lib/exif.ts` | Add GPS + new tag extraction |
-| `src/components/Lightbox.tsx` | Display new fields + geocoding |
+Or with a link: `Built with [Claude Code](https://claude.ai/code), Next.js, React & Tailwind CSS`
+
+## Dependencies
+- None (pure frontend changes)
 
 ## Risks
-
-- **MEDIUM**: GPS data may not exist in all photos (iPhone strips it when shared)
-- **LOW**: Geocoding API rate limits (mitigated by caching)
-- **LOW**: API unavailability (graceful fallback to no location)
+- **LOW**: Layout restructure could affect scroll behavior - StickyHeader should still work correctly
+- **LOW**: Need to verify container widths remain consistent for gallery content
+- **MEDIUM**: Mobile review may uncover additional issues requiring fixes
 
 ## TDD Recommended: No
+**Reason:** These are primarily UI/styling changes and layout restructuring. Visual changes are better validated through manual testing and visual inspection rather than automated tests. The changes don't affect business logic or data processing.
 
-EXIF parsing and API integration best validated with real photos and manual testing.
+## Files to Modify
+1. `src/app/page.tsx` - Restructure layout for full-width header
+2. `src/components/Footer.tsx` - Add Claude Code attribution
+3. `src/components/StickyHeader.tsx` - Potentially add responsive text sizing (after mobile review)
+4. `src/components/Lightbox.tsx` - Potentially improve mobile layout (after mobile review)
 
 ---
 

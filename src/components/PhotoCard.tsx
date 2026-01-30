@@ -65,6 +65,8 @@ export function PhotoCard({ src, alt, index, onClick }: PhotoCardProps) {
         relative overflow-hidden rounded-lg cursor-pointer
         transition-all duration-300 ease-out
         hover:shadow-xl hover:scale-[1.02]
+        active:scale-[0.98] active:shadow-lg
+        focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none
         ${isLoaded ? "" : "bg-neutral-100"}
       `}
       style={!shouldAnimate ? { opacity: 1, transform: "none" } : undefined}

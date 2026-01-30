@@ -34,7 +34,7 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
   return (
     <header
       className={`
-        sticky top-0 z-40 text-center py-6
+        sticky top-0 z-40 text-center py-4 sm:py-6
         transition-all duration-300 ease-out
         ${isScrolled ? "backdrop-blur-md bg-white/90 shadow-sm" : "bg-white"}
       `}
@@ -44,7 +44,7 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
         className={`
           relative flex flex-col items-center justify-center overflow-hidden
           transition-all duration-300 ease-out
-          ${isScrolled ? "h-[48px]" : "h-[100px]"}
+          ${isScrolled ? "h-[40px] sm:h-[48px]" : "h-[80px] sm:h-[100px]"}
         `}
       >
         {/* Expanded view */}
@@ -55,13 +55,13 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
             ${isScrolled ? "opacity-0 -translate-y-4 pointer-events-none" : "opacity-100 translate-y-0"}
           `}
         >
-          <h1 className="font-display text-5xl font-bold">{title}</h1>
-          <p className="text-neutral-600 text-lg mt-1">{author}</p>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold">{title}</h1>
+          <p className="text-neutral-600 text-base sm:text-lg mt-1">{author}</p>
           <a
             href={`https://instagram.com/${handle.replace("@", "")}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-neutral-600 hover:text-neutral-800 transition-colors text-sm"
+            className="text-neutral-600 hover:text-neutral-800 active:text-neutral-900 transition-colors text-sm px-2 py-1 -mx-2 -my-1 min-h-[44px] inline-flex items-center"
           >
             {handle}
           </a>
@@ -75,9 +75,9 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
             ${isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
           `}
         >
-          <span className="font-display text-xl font-bold">{title}</span>
-          <span className="text-neutral-400 mx-2">&middot;</span>
-          <span className="text-neutral-600">{author}</span>
+          <span className="font-display text-lg sm:text-xl font-bold">{title}</span>
+          <span className="text-neutral-400 mx-1 sm:mx-2">&middot;</span>
+          <span className="text-neutral-600 text-sm sm:text-base">{author}</span>
         </div>
       </div>
     </header>

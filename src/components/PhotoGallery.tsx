@@ -28,11 +28,11 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
 
   if (shuffledPhotos.length === 0) {
     return (
-      <div className="text-center text-neutral-500 py-12">
+      <div className="text-center text-neutral-500 py-8 sm:py-12 px-4">
         <p>No photos found.</p>
-        <p className="mt-2">
+        <p className="mt-2 text-sm sm:text-base">
           Add images to{" "}
-          <code className="bg-neutral-100 px-2 py-1 rounded">/public/photos/</code>
+          <code className="bg-neutral-100 px-2 py-1 rounded text-xs sm:text-sm break-all">/public/photos/</code>
         </p>
       </div>
     );
@@ -40,9 +40,9 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
 
   return (
     <>
-      <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
+      <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-2 sm:gap-4">
         {shuffledPhotos.map((photo, index) => (
-          <div key={photo.filename} className="break-inside-avoid mb-4">
+          <div key={photo.filename} className="break-inside-avoid mb-2 sm:mb-4">
             <PhotoCard
               src={photo.src}
               alt={photo.filename}

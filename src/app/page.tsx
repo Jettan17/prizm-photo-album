@@ -7,16 +7,18 @@ export default function Home() {
   const photos = getPhotos();
 
   return (
-    <main className="container mx-auto px-4">
+    <>
       <StickyHeader
         title="Prizm"
         author="Jethro Tan"
         handle="@jepho_tan"
       />
-      <div className="mt-4">
-        <PhotoGallery photos={photos} />
-      </div>
+      <main className="container mx-auto px-4">
+        <div className="mt-4">
+          <PhotoGallery photos={photos} />
+        </div>
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }
