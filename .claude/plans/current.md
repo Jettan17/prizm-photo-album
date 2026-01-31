@@ -1,55 +1,106 @@
-# Implementation Plan: Fix Logo Centering and Improve Spectrum Rays
+# Implementation Plan: Fix Mobile Button Alignment in Lightbox
 
-Created: 2026-01-30
-Status: completed
-Completed: 2026-01-30
+Created: 2026-01-31
+Status: pending
 
 ## Requirements
 
-1. **Center the logo image**: The prism + text combination should be horizontally centered within the SVG, so when the image is displayed centered in the header, it appears properly balanced.
+On mobile, the info button and zoom button are not properly aligned. The current implementation uses absolute positioning with arbitrary `right-` values that don't create consistent spacing.
 
-2. **Improve spectrum rays realism**: Replace simple colored lines with more realistic light beam effects:
-   - Gradient fading (bright at source, fading outward)
-   - Soft glow/blur effects
-   - Varying beam widths (wider as they spread)
-   - Slight transparency for light-like appearance
+**Goal:** Group all three buttons (close, zoom, info) together in the top-right corner with consistent spacing.
+
+---
+
+## Current Problem
+
+```
+Current positioning:
+- Close:  right-2 sm:right-4
+- Zoom:   right-14 sm:right-16
+- Info:   right-26 sm:right-28  ← "right-26" is not a standard Tailwind class
+```
+
+The `right-26` class doesn't exist in Tailwind (it goes 24, 28, 32...), causing inconsistent positioning.
+
+---
 
 ## Implementation Phases
 
-### Phase 1: Recalculate Logo Layout for Centering
-- [x] Calculate total content width (prism + gap + text)
-- [x] Determine offset to center content in viewBox
-- [x] Shift all elements by the offset amount using `<g transform="translate(20, 0)">`
+### Phase 1: Group Buttons in Flex Container
+**File:** `src/components/Lightbox.tsx`
 
-### Phase 2: Create Realistic Spectrum Ray Effects
-- [x] Create gradient definitions for each color that fade from bright to transparent
-- [x] Replace lines with tapered polygons (narrow at prism, wider at end)
-- [x] Add blur filter (`feGaussianBlur`) for soft glow effect
-- [x] Add secondary "glow" layer behind main rays with stronger blur
-- [x] Adjust opacity and blending for light-like appearance
+- [ ] **1.1** Create a flex container for the top-right button group
+- [ ] **1.2** Position container with `absolute top-2 right-2 sm:top-4 sm:right-4`
+- [ ] **1.3** Use `flex gap-1 sm:gap-2` for consistent button spacing
+- [ ] **1.4** Move close, zoom, and info buttons into the flex container
+- [ ] **1.5** Remove absolute positioning from individual buttons (they inherit from container)
+- [ ] **1.6** Order buttons: Info → Zoom → Close (left to right, close always rightmost)
 
-### Phase 3: Update Favicon Icon
-- [x] Apply spectrum ray improvements to `src/app/icon.svg`
-- [x] Used simpler glow (stdDeviation=0.8) for clarity at small sizes
+---
 
-### Phase 4: Update Apple Icon
-- [x] Apply same improvements to `src/app/apple-icon.tsx`
+## Button Order (Left to Right)
 
-## Files Modified
+| Position | Button | Reason |
+|----------|--------|--------|
+| 1 (left) | Info | Least frequently used |
+| 2 (middle) | Zoom | Used during viewing |
+| 3 (right) | Close | Most important, always rightmost |
 
-- `public/logo.svg` - Centered layout, realistic spectrum rays with gradients and glow
-- `src/app/icon.svg` - Updated with gradient rays and subtle glow
-- `src/app/apple-icon.tsx` - Updated with matching effects
+---
 
-## Technical Implementation
+## Dependencies
 
-### Centering Solution
-Used `<g transform="translate(20, 0)">` to shift all content right by 20px, centering the ~160px content in the 200px viewBox.
+- None (CSS-only change)
 
-### Spectrum Ray Improvements
-1. **Fading gradients**: Each ray color has its own gradient (bright → transparent)
-2. **Tapered polygons**: Rays are wider at the far end, narrower at the prism
-3. **Dual glow layers**:
-   - Background layer: `feGaussianBlur stdDeviation="3"` at 40% opacity for ambient light
-   - Foreground layer: `feGaussianBlur stdDeviation="1.5"` merged with source for crisp glow
-4. **5 spectrum colors**: Red, Orange, Teal, Blue, Purple
+---
+
+## Risks
+
+- **LOW:** Button order change may confuse existing users briefly
+
+---
+
+## TDD Recommended: No
+
+**Reason:** This is a CSS/layout-only change with no business logic. Visual verification is required.
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/components/Lightbox.tsx` | Wrap buttons in flex container, remove individual absolute positioning |
+
+---
+
+## Expected Result
+
+```jsx
+{/* Top-right button group */}
+<div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 flex gap-1 sm:gap-2">
+  {/* Info button */}
+  <button>...</button>
+  {/* Zoom button */}
+  <button>...</button>
+  {/* Close button */}
+  <button>...</button>
+</div>
+```
+
+---
+
+## Testing Checklist
+
+- [ ] All three buttons visible and aligned on mobile (<640px)
+- [ ] All three buttons visible and aligned on desktop
+- [ ] Buttons have consistent spacing
+- [ ] Touch targets remain 44px minimum
+- [ ] Buttons don't overlap with navigation arrows
+- [ ] Close button remains rightmost
+
+---
+
+## Next Steps
+
+Run `/run` to execute this plan.

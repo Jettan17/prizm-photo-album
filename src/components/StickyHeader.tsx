@@ -45,7 +45,7 @@ export function StickyHeader({ title, author, handle }: StickyHeaderProps) {
         className={`
           relative flex flex-col items-center justify-center overflow-hidden
           transition-all duration-300 ease-out
-          ${isScrolled ? "h-[40px] sm:h-[48px]" : "h-[80px] sm:h-[100px]"}
+          ${isScrolled ? "h-[40px] sm:h-[48px]" : "h-[96px] sm:h-[112px]"}
         `}
       >
         {/* Expanded view */}

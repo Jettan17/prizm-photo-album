@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-Last updated: 2026-01-29
+Last updated: 2026-01-31
 
 **Live:** [prizm-photo-album.vercel.app](https://prizm-photo-album.vercel.app)
 
@@ -15,8 +15,11 @@ App (layout.tsx)
     ├── PhotoGallery
     │   ├── PhotoCard (x N)
     │   └── Lightbox (conditional)
-    │       ├── Navigation buttons
-    │       ├── Image viewer
+    │       ├── Close button
+    │       ├── Zoom toggle button
+    │       ├── Info toggle button
+    │       ├── Navigation buttons (prev/next)
+    │       ├── Image viewer (with zoom/pan)
     │       └── EXIF panel
     │           ├── Location (with pin icon)
     │           ├── Date (with calendar icon)
@@ -39,6 +42,9 @@ App (layout.tsx)
 | Lightbox | `exifData` | Extracted EXIF metadata |
 | Lightbox | `location` | Reverse geocoded location |
 | Lightbox | `showInfo` | Toggle info panel visibility |
+| Lightbox | `zoomLevel` | Current zoom (1x-3x) |
+| Lightbox | `panPosition` | Pan offset when zoomed |
+| Lightbox | `isDragging` | Active drag state |
 
 ### Refs (useRef)
 
@@ -46,6 +52,12 @@ App (layout.tsx)
 |-----------|-----|---------|
 | StickyHeader | `lastScrollY` | Scroll direction detection |
 | PhotoCard | `ref` | IntersectionObserver target |
+| Lightbox | `imageContainerRef` | Pan boundary calculations |
+| Lightbox | `dragStart` | Mouse/touch drag start position |
+| Lightbox | `lastPanPosition` | Pan position before drag |
+| Lightbox | `lastTapTime` | Double-tap detection |
+| Lightbox | `initialPinchDistance` | Pinch zoom start distance |
+| Lightbox | `initialPinchZoom` | Zoom level at pinch start |
 
 ## EXIF Data Interface
 
@@ -72,7 +84,7 @@ interface ExifData {
 - **Layout**: `columns-1 sm:columns-2 lg:columns-3 xl:columns-4`
 - **Animations**: Custom `scroll-reveal` class with stagger delays
 - **Transitions**: `transition-all duration-300 ease-out`
-- **Header height**: `h-[100px]` → `h-[48px]` on scroll
+- **Header height**: `h-[112px]` → `h-[48px]` on scroll (mobile: 96px → 40px)
 
 ### Custom CSS (globals.css)
 
@@ -103,6 +115,28 @@ interface ExifData {
 - Responsive `sizes` attribute for appropriate image selection
 - Lazy loading via intersection observer
 - AVIF/WebP conversion on Vercel CDN
+
+## Lightbox Zoom & Pan
+
+### Controls
+
+| Input | Action |
+|-------|--------|
+| Zoom button | Toggle 1x ↔ 2x |
+| 'z' key | Toggle 1x ↔ 2x |
+| Double-tap (mobile) | Toggle 1x ↔ 2x |
+| Pinch (mobile) | Continuous zoom 1x-3x |
+| Mouse drag (zoomed) | Pan image |
+| Touch drag (zoomed) | Pan image |
+
+### Behavior
+
+- **Zoom range**: 1x (fit) to 3x (maximum)
+- **Snap points**: Pinch snaps to 1x or 2x on release
+- **Pan constraints**: Image edges cannot leave viewport
+- **Navigation lock**: Swipe disabled when zoomed (prevents accidental changes)
+- **Reset on navigate**: Zoom returns to 1x when changing photos
+- **Cursor feedback**: `cursor-grab` when zoomed, `cursor-grabbing` while dragging
 
 ## External API Integration
 

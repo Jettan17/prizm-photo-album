@@ -15,7 +15,11 @@ A modern photo gallery built with Next.js 15 and React 19. Features a responsive
 ## Features
 
 - **Masonry Gallery**: Responsive multi-column layout (1-4 columns based on viewport)
-- **Lightbox Viewer**: Fullscreen photo viewing with keyboard navigation
+- **Lightbox Viewer**: Fullscreen photo viewing with keyboard navigation and zoom
+  - Zoom in/out with button, keyboard ('z'), or double-tap
+  - Pinch-to-zoom on mobile (1x-3x)
+  - Drag/pan to explore when zoomed
+  - Swipe navigation (disabled when zoomed)
 - **Rich EXIF Metadata**: Extracts and displays comprehensive camera info:
   - Date taken
   - Camera model
@@ -24,7 +28,7 @@ A modern photo gallery built with Next.js 15 and React 19. Features a responsive
   - Aperture, shutter speed, ISO
   - Exposure compensation
   - **Location** (reverse geocoded from GPS coordinates)
-- **Animated Header**: Sticky header that shrinks on scroll (100px → 48px)
+- **Animated Header**: Sticky header that shrinks on scroll (112px → 48px)
 - **Lazy Loading**: Photos load on scroll with staggered reveal animations
 - **Location Caching**: GPS coordinates cached to minimize API calls
 
@@ -101,6 +105,16 @@ prizm-photo-album/
 | `Arrow Left` | Previous photo |
 | `Arrow Right` | Next photo |
 | `i` | Toggle photo info |
+| `z` | Toggle zoom |
+
+## Touch Gestures (Mobile)
+
+| Gesture | Action |
+|---------|--------|
+| Swipe left/right | Navigate photos |
+| Double-tap | Toggle zoom |
+| Pinch | Zoom in/out (1x-3x) |
+| Drag (when zoomed) | Pan around image |
 
 ## Available Scripts
 

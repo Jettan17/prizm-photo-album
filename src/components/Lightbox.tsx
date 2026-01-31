@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Photo } from "@/lib/photos";
 import { ExifData, extractExif, reverseGeocode } from "@/lib/exif";
 
@@ -19,6 +19,21 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
   const [showInfo, setShowInfo] = useState(true);
   const [location, setLocation] = useState<string | null>(null);
 
+  // Zoom state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const lastPanPosition = useRef({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+
+  // Double-tap detection
+  const lastTapTime = useRef(0);
+
+  // Pinch zoom state
+  const initialPinchDistance = useRef<number | null>(null);
+  const initialPinchZoom = useRef(1);
+
   // Touch swipe state
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -26,6 +41,7 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
   const photo = photos[currentIndex];
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < photos.length - 1;
+  const isZoomed = zoomLevel > 1;
 
   const goToPrev = useCallback(() => {
     if (hasPrev) onNavigate(currentIndex - 1);
@@ -35,28 +51,167 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
     if (hasNext) onNavigate(currentIndex + 1);
   }, [hasNext, currentIndex, onNavigate]);
 
+  // Zoom toggle function
+  const toggleZoom = useCallback(() => {
+    if (isZoomed) {
+      setZoomLevel(1);
+      setPanPosition({ x: 0, y: 0 });
+    } else {
+      setZoomLevel(2);
+    }
+  }, [isZoomed]);
+
+  // Reset zoom when navigating
+  useEffect(() => {
+    setZoomLevel(1);
+    setPanPosition({ x: 0, y: 0 });
+  }, [currentIndex]);
+
+  // Calculate pan boundaries
+  const constrainPan = useCallback((x: number, y: number, zoom: number) => {
+    if (zoom <= 1) return { x: 0, y: 0 };
+
+    const container = imageContainerRef.current;
+    if (!container) return { x, y };
+
+    const maxPanX = (container.offsetWidth * (zoom - 1)) / 2;
+    const maxPanY = (container.offsetHeight * (zoom - 1)) / 2;
+
+    return {
+      x: Math.max(-maxPanX, Math.min(maxPanX, x)),
+      y: Math.max(-maxPanY, Math.min(maxPanY, y)),
+    };
+  }, []);
+
+  // Mouse drag handlers for panning
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isZoomed) return;
+    e.preventDefault();
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    lastPanPosition.current = panPosition;
+  }, [isZoomed, panPosition]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging || !isZoomed) return;
+    const deltaX = e.clientX - dragStart.current.x;
+    const deltaY = e.clientY - dragStart.current.y;
+    const newPos = constrainPan(
+      lastPanPosition.current.x + deltaX,
+      lastPanPosition.current.y + deltaY,
+      zoomLevel
+    );
+    setPanPosition(newPos);
+  }, [isDragging, isZoomed, zoomLevel, constrainPan]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Get distance between two touch points
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return null;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
   // Touch swipe handlers
   const minSwipeDistance = 50;
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    // Check for double-tap
+    const now = Date.now();
+    if (now - lastTapTime.current < 300 && e.touches.length === 1) {
+      toggleZoom();
+      lastTapTime.current = 0;
+      return;
+    }
+    lastTapTime.current = now;
+
+    // Handle pinch zoom start
+    if (e.touches.length === 2) {
+      const distance = getTouchDistance(e.touches);
+      if (distance) {
+        initialPinchDistance.current = distance;
+        initialPinchZoom.current = zoomLevel;
+      }
+      return;
+    }
+
+    // Handle single touch for swipe or pan
+    if (isZoomed) {
+      setIsDragging(true);
+      dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastPanPosition.current = panPosition;
+    } else {
+      setTouchEnd(null);
+      setTouchStart(e.targetTouches[0].clientX);
+    }
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    // Handle pinch zoom
+    if (e.touches.length === 2 && initialPinchDistance.current) {
+      const distance = getTouchDistance(e.touches);
+      if (distance) {
+        const scale = distance / initialPinchDistance.current;
+        const newZoom = Math.max(1, Math.min(3, initialPinchZoom.current * scale));
+        setZoomLevel(newZoom);
+        if (newZoom <= 1) {
+          setPanPosition({ x: 0, y: 0 });
+        }
+      }
+      return;
+    }
+
+    // Handle pan when zoomed
+    if (isZoomed && isDragging && e.touches.length === 1) {
+      const deltaX = e.touches[0].clientX - dragStart.current.x;
+      const deltaY = e.touches[0].clientY - dragStart.current.y;
+      const newPos = constrainPan(
+        lastPanPosition.current.x + deltaX,
+        lastPanPosition.current.y + deltaY,
+        zoomLevel
+      );
+      setPanPosition(newPos);
+      return;
+    }
+
+    // Handle swipe (not zoomed)
+    if (!isZoomed) {
+      setTouchEnd(e.targetTouches[0].clientX);
+    }
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
+    // Reset pinch state
+    if (initialPinchDistance.current) {
+      initialPinchDistance.current = null;
+      // Snap to 1x or 2x
+      if (zoomLevel < 1.3) {
+        setZoomLevel(1);
+        setPanPosition({ x: 0, y: 0 });
+      } else if (zoomLevel > 1.3 && zoomLevel < 2.5) {
+        setZoomLevel(2);
+      }
+      return;
+    }
 
-    if (isLeftSwipe && hasNext) {
-      goToNext();
-    } else if (isRightSwipe && hasPrev) {
-      goToPrev();
+    // Reset drag state
+    setIsDragging(false);
+
+    // Handle swipe navigation (only when not zoomed)
+    if (!isZoomed && touchStart && touchEnd) {
+      const distance = touchStart - touchEnd;
+      const isLeftSwipe = distance > minSwipeDistance;
+      const isRightSwipe = distance < -minSwipeDistance;
+
+      if (isLeftSwipe && hasNext) {
+        goToNext();
+      } else if (isRightSwipe && hasPrev) {
+        goToPrev();
+      }
     }
   };
 
@@ -99,12 +254,15 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
         case "i":
           setShowInfo((prev) => !prev);
           break;
+        case "z":
+          toggleZoom();
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, goToPrev, goToNext]);
+  }, [onClose, goToPrev, goToNext, toggleZoom]);
 
   // Lock body scroll
   useEffect(() => {
@@ -144,30 +302,57 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
       aria-modal="true"
       aria-label="Photo lightbox"
     >
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 p-3 text-white/70 hover:text-white active:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-        aria-label="Close lightbox"
-      >
-        <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      {/* Top-right button group */}
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 flex gap-1 sm:gap-2">
+        {/* Info toggle button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowInfo((prev) => !prev);
+          }}
+          className="p-3 text-white/70 hover:text-white active:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          aria-label="Toggle photo info"
+        >
+          <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
 
-      {/* Info toggle button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowInfo((prev) => !prev);
-        }}
-        className="absolute top-2 right-14 sm:top-4 sm:right-16 z-50 p-3 text-white/70 hover:text-white active:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-        aria-label="Toggle photo info"
-      >
-        <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
+        {/* Zoom toggle button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleZoom();
+          }}
+          className={`p-3 text-white/70 hover:text-white active:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${isZoomed ? "text-white" : ""}`}
+          aria-label={isZoomed ? "Zoom out" : "Zoom in"}
+        >
+          <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {isZoomed ? (
+              <>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11h6" />
+              </>
+            ) : (
+              <>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 8v6m3-3H7" />
+              </>
+            )}
+          </svg>
+        </button>
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="p-3 text-white/70 hover:text-white active:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          aria-label="Close lightbox"
+        >
+          <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       {/* Previous button */}
       {hasPrev && (
@@ -203,11 +388,16 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
 
       {/* Main image container */}
       <div
-        className="relative max-w-[90vw] max-h-[90vh] min-h-[50vh] min-w-[50vw] flex items-center justify-center"
+        ref={imageContainerRef}
+        className={`relative max-w-[90vw] max-h-[90vh] min-h-[50vh] min-w-[50vw] flex items-center justify-center overflow-hidden ${isZoomed ? "touch-none" : ""}`}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         {/* Loading spinner */}
         {!isImageLoaded && (
@@ -224,10 +414,15 @@ export function Lightbox({ photos, currentIndex, onClose, onNavigate }: Lightbox
           height={1080}
           className={`
             max-h-[90vh] w-auto object-contain rounded-lg
-            transition-opacity duration-300
+            transition-all duration-200 ease-out
             ${isImageLoaded ? "opacity-100" : "opacity-0"}
+            ${isZoomed ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}
           `}
+          style={{
+            transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
+          }}
           onLoad={() => setIsImageLoaded(true)}
+          draggable={false}
           priority
         />
 
