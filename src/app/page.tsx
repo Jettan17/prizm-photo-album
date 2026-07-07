@@ -11,7 +11,7 @@ export default function Home() {
       <StickyHeader
         title="Prizm"
         author="Jethro Tan"
-        handle="@jepho_tan"
+        handle="@jet.hrome"
       />
       <main className="container mx-auto px-4">
         <div className="mt-4">

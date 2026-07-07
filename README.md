@@ -139,4 +139,4 @@ See [docs/DEPLOY.md](docs/DEPLOY.md) for detailed deployment instructions.
 
 ## License
 
-Private project by Jethro Tan ([@jepho_tan](https://instagram.com/jepho_tan))
+Private project by Jethro Tan ([@jet.hrome](https://instagram.com/jet.hrome))
